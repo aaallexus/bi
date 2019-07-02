@@ -50,6 +50,17 @@ var Diagram=SimpleObject.extend({
         this.mainDiv.css({position:'absolute'});
         console.log(this.mainDiv.position().left);
     },
+    showControlPanel:function(){
+        var button=panelButton.extend({
+            width:10,
+            height:10,
+            image:null,
+            'name':'edit',
+            'title':'edit'
+        });
+        this.mainDiv.append('<div>');
+
+    },
     setChoosed:function(){
         var self=this;
         this.isChoosed=!this.isChoosed;
