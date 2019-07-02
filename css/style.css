@@ -1,0 +1,40 @@
+.diagram{
+	position: absolute;
+	float: left;
+	margin:10px;
+	border: 1px solid #acacac;
+	background: #fff;
+}
+.choosed{
+	background:rgba(220,220,220,0.8);
+	box-shadow: 7px 7px 14px 1px #acacac;
+	border: none;
+	cursor:move;
+}
+.bullet{
+	background:#000;
+	width:5px;
+	height:5px;
+	cursor:ew-resize;
+	position:absolute;
+}
+.bullet-up-left{
+	cursor:nwse-resize;
+	top:-2px;
+	left:-2px;
+}
+.bullet-down-left{
+	cursor:nesw-resize;
+	bottom:-2px;
+	left:-2px;
+}
+.bullet-up-right{
+	cursor:nesw-resize;
+	top:-2px;
+	right:-2px;
+}
+.bullet-down-right{
+	cursor:nwse-resize;
+	bottom:-2px;
+	right:-2px;
+}
