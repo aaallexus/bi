@@ -1,11 +1,42 @@
+const typeGraphics=[
+    'line',
+    'bar'
+];
 var SimpleObject={
-    mainObj:null,
     mainDiv:null,
     extend:function(obj){
         var clone=$.extend(true,{},this);
         return $.extend(true,clone,obj);
     }
 }
+var inputElement=SimpleObject.extend({
+    change:function(){
+
+    }
+});
+var ComboBox=inputElement.extend({
+    values:[],
+    value:null,
+    name:'',
+    init:function(name, values){
+        var self=this;
+        this.name=name;
+        this.values=values;
+        this.mainDiv=$('<select></select>');
+        this.mainDiv
+            .attr('name',this.name);
+        $.each(this.values,function(key,value){
+            self.mainDiv.append("<option value='"+key+"'>"+value+"</option>");
+        });
+        this.mainDiv.change(function(){
+            self.value=this.value;
+            self.change();
+        });
+    },
+    show:function(){
+        return this.mainDiv;
+    }
+});
 var panelButton=SimpleObject.extend({
     name:'',
     width:50,
@@ -22,14 +53,43 @@ var panelButton=SimpleObject.extend({
                 'border':'1px solid'
             })
             .addClass('panel-button');
-        this.mainObj.append(this.mainDiv);
+//        this.mainObj.append(this.mainDiv);
         this.mainDiv.click(this.action);
+        return this.mainDiv;
+    }
+});
+var SettingPanel=SimpleObject.extend({
+    type:1,
+    obj:null,
+    show:function(){
+        this.mainDiv=$("<div></div>");
+        this.mainDiv.append('Hello');
+        switch(this.type)
+        {
+            case 1: this.mainDiv.append(this.diagramSetting());break;
+        }
+        return this.mainDiv;
+    },
+    save:function(){
+
+    },
+    diagramSetting:function(){
+        var self=this;
+        var combobox=Object.create(ComboBox);
+        combobox.init('typeDiagram',typeGraphics);
+        combobox.change=function(){
+            self.obj.type=this.value*1;
+            self.save();
+        }
+        this.mainDiv.append(combobox.show());
     }
 });
 var Diagram=SimpleObject.extend({
+    type:1,
     width:400,
     height:200,
     isChoosed:false,
+    editor:'#controlPanel',
     create:function(){
         var self=this;
         this.mainDiv=$("<div></div>");
@@ -42,24 +102,55 @@ var Diagram=SimpleObject.extend({
             .click(function(){
                 self.setChoosed();
             });
-        this.mainObj.append(this.mainDiv);
+//        this.mainObj.append(this.mainDiv);
         this.mainDiv.css({
             top:this.mainDiv.position().top+'px',
             left:this.mainDiv.position().left+'px'
         });
         this.mainDiv.css({position:'absolute'});
+        this.showControlPanel();
         console.log(this.mainDiv.position().left);
+        return this.mainDiv;
+    },
+    update:function(){
+
     },
     showControlPanel:function(){
+        var self=this;
         var button=panelButton.extend({
-            width:10,
-            height:10,
+            width:30,
+            height:30,
             image:null,
             'name':'edit',
-            'title':'edit'
+            'title':'edit',
+            action:function(){
+                self.editDiagram();
+            }
         });
-        this.mainDiv.append('<div>');
+        var button2=panelButton.extend({
+            width:30,
+            height:30,
+            image:null,
+            'name':'show',
+            'title':'show',
+            action:function(){
+                console.log(self);
+            }
+        });
+        this.mainDiv.append(button.show());
+        this.mainDiv.append(button2.show());
 
+    },
+    editDiagram:function(){
+        var self=this;
+        $(this.editor).html('');
+        var setting=SettingPanel.extend({
+            obj:this,
+            save:function(){
+                self.type=this.obj.type;
+            }
+        });
+        $('#controlPanel').html(setting.show());
     },
     setChoosed:function(){
         var self=this;
@@ -71,8 +162,8 @@ var Diagram=SimpleObject.extend({
             this.mainDiv
                 .addClass('choosed')
                 .resizable({
-                    //grid: [ 20, 10 ],
-                     handles: "ne, se, nw, sw",
+                    grid: [ 20, 20 ],
+                    handles: "ne, se, nw, sw",
                      classes:{
                         "ui-resizable-nw":"bullet bullet-up-left",
                         "ui-resizable-sw":"bullet bullet-down-left",
@@ -83,9 +174,12 @@ var Diagram=SimpleObject.extend({
                         self.isChoosed=false;
                     }
                 })
-                .draggable({drag:function(){
-                    self.isChoosed=false;
-                }})
+                .draggable({
+                    grid: [ 20, 20 ],
+                    drag:function(){
+                        self.isChoosed=false;
+                    }
+                })
                 .draggable("option", "disabled", false);
                 this.showControls();
         }
@@ -95,7 +189,6 @@ var Diagram=SimpleObject.extend({
         }
     },
     setUnChoose:function(){
-        console.log(1);
         this.isChoosed=false;
         this.mainDiv.removeClass('choosed')
         //this.mainDiv.draggable( "option", "disabled", true );
@@ -131,7 +224,6 @@ var Composer = SimpleObject.extend({
         var self=this;
         this.buttons=[
             panelButton.extend({
-                mainObj:this.panelDiv,
                 'name':'create',
                 'title':'create',
                 image:'create.png',
@@ -140,12 +232,10 @@ var Composer = SimpleObject.extend({
                 }
             }),
             panelButton.extend({
-                mainObj:this.panelDiv,
                 'name':'edit',
                 image:'create.png'
             }),
             panelButton.extend({
-                mainObj:this.panelDiv,
                 'name':'delete',
                 'title':'delete',
                 image:'create.png'
@@ -156,7 +246,6 @@ var Composer = SimpleObject.extend({
         var self=this;
         var diagram=Diagram.extend({
             diagramsList:self.diagramsList,
-            mainObj:this.mainDiv,
             unChoosed:function(){
                 for(var i=0;i<self.diagramsList.length;i++)
                 {
@@ -166,7 +255,7 @@ var Composer = SimpleObject.extend({
         });
         this.diagramsList.push(diagram);
         console.log(this.diagramsList);
-        diagram.create();
+        this.mainDiv.append(diagram.create());
     },
     showMainWindow:function(){
         this.mainDiv=$("<div></div>");
@@ -180,7 +269,7 @@ var Composer = SimpleObject.extend({
         $(this.mainObj).append(this.mainDiv);
     },
     showPanel:function(){
-        this.panelDiv=$("<div></div>");
+        this.panelDiv=$("<div id='controlPanel'></div>");
         this.panelDiv.css({
             'width':'20%',
             'height':'100%',
@@ -205,7 +294,7 @@ var Composer = SimpleObject.extend({
     showButtons:function(buttonList){
         var self=this;
         $.each(buttonList,function(key,value){
-            self.getButton(value).show();
+            $('#buttons').append(self.getButton(value).show());
         })
     }
 });
