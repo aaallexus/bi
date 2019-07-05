@@ -1,9 +1,16 @@
-.diagram{
+.vidget{
 	position: absolute;
+	z-index: 5;
 	float: left;
 	margin:10px;
 	border: 1px solid #acacac;
 	background: #fff;
+}
+.vidget #chart{
+	position:absolute;
+	top:0;
+	left:0;
+	z-index: 1;
 }
 .choosed{
 	/*background:rgba(240,240,240,0.8);
@@ -40,4 +47,5 @@
 }
 .panel-button{
 	display:inline-block;
+	z-index:10;
 }

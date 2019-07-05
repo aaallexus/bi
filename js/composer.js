@@ -1,7 +1,14 @@
-const typeGraphics=[
-    'line',
-    'bar'
-];
+const TYPE_GRAPHIC_LINE=1;
+const TYPE_GRAPHIC_BAR=2;
+const TYPE_GRAPHIC_PIE=3;
+const TYPE_GRAPHIC_DOUGHNUT=4;
+const TYPE_GRAPHICS=[''];
+const SERVER_URL='server.php';
+TYPE_GRAPHICS[TYPE_GRAPHIC_LINE]='line';
+TYPE_GRAPHICS[TYPE_GRAPHIC_BAR]='bar';
+TYPE_GRAPHICS[TYPE_GRAPHIC_PIE]='pie';
+TYPE_GRAPHICS[TYPE_GRAPHIC_PIE]='doughnut';
+
 var SimpleObject={
     mainDiv:null,
     extend:function(obj){
@@ -11,14 +18,13 @@ var SimpleObject={
 }
 var inputElement=SimpleObject.extend({
     change:function(){
-
     }
 });
 var ComboBox=inputElement.extend({
     values:[],
     value:null,
     name:'',
-    init:function(name, values){
+    init:function(name, values,defaultValue){
         var self=this;
         this.name=name;
         this.values=values;
@@ -32,6 +38,7 @@ var ComboBox=inputElement.extend({
             self.value=this.value;
             self.change();
         });
+        this.mainDiv.val(defaultValue);
     },
     show:function(){
         return this.mainDiv;
@@ -53,7 +60,6 @@ var panelButton=SimpleObject.extend({
                 'border':'1px solid'
             })
             .addClass('panel-button');
-//        this.mainObj.append(this.mainDiv);
         this.mainDiv.click(this.action);
         return this.mainDiv;
     }
@@ -63,29 +69,32 @@ var SettingPanel=SimpleObject.extend({
     obj:null,
     show:function(){
         this.mainDiv=$("<div></div>");
-        this.mainDiv.append('Hello');
         switch(this.type)
         {
-            case 1: this.mainDiv.append(this.diagramSetting());break;
+            case 1: this.mainDiv.append(this.vidgetSetting());break;
         }
         return this.mainDiv;
     },
     save:function(){
 
     },
-    diagramSetting:function(){
+    vidgetSetting:function(){
         var self=this;
+        console.log(this.obj);
         var combobox=Object.create(ComboBox);
-        combobox.init('typeDiagram',typeGraphics);
+        var comboboxDataSource=Object.create(ComboBox);
+        combobox.init('typeVidget',TYPE_GRAPHICS,this.obj.type);
         combobox.change=function(){
             self.obj.type=this.value*1;
             self.save();
         }
+
+        comboboxDataSource.init('dataSource',TYPE_GRAPHICS,this.obj.type);
         this.mainDiv.append(combobox.show());
     }
 });
-var Diagram=SimpleObject.extend({
-    type:1,
+var Vidget=SimpleObject.extend({
+    type:0,
     width:400,
     height:200,
     isChoosed:false,
@@ -98,7 +107,7 @@ var Diagram=SimpleObject.extend({
                 "width":this.width+'px',
                 "height":this.height+'px'
             })
-            .addClass('diagram')
+            .addClass('vidget')
             .click(function(){
                 self.setChoosed();
             });
@@ -109,11 +118,16 @@ var Diagram=SimpleObject.extend({
         });
         this.mainDiv.css({position:'absolute'});
         this.showControlPanel();
+        this.mainDiv.append('<div id="title"></div>');
         console.log(this.mainDiv.position().left);
+        this.afterCreate();
+        this.update();
         return this.mainDiv;
     },
+    afterCreate:function(){
+    },
     update:function(){
-
+        $('#title',this.mainDiv).text(this.type);
     },
     showControlPanel:function(){
         var self=this;
@@ -124,7 +138,7 @@ var Diagram=SimpleObject.extend({
             'name':'edit',
             'title':'edit',
             action:function(){
-                self.editDiagram();
+                self.editVidget();
             }
         });
         var button2=panelButton.extend({
@@ -137,17 +151,18 @@ var Diagram=SimpleObject.extend({
                 console.log(self);
             }
         });
-        this.mainDiv.append(button.show());
-        this.mainDiv.append(button2.show());
+       // this.mainDiv.append(button.show());
+        //this.mainDiv.append(button2.show());
 
     },
-    editDiagram:function(){
+    editVidget:function(){
         var self=this;
         $(this.editor).html('');
         var setting=SettingPanel.extend({
             obj:this,
             save:function(){
                 self.type=this.obj.type;
+                self.update();
             }
         });
         $('#controlPanel').html(setting.show());
@@ -159,9 +174,12 @@ var Diagram=SimpleObject.extend({
         {
             this.unChoosed();
             this.isChoosed=true;
+            this.editVidget();
             this.mainDiv
                 .addClass('choosed')
                 .resizable({
+                    minHeight:100,
+                    minWidth:200,
                     grid: [ 20, 20 ],
                     handles: "ne, se, nw, sw",
                      classes:{
@@ -170,8 +188,10 @@ var Diagram=SimpleObject.extend({
                         "ui-resizable-ne":"bullet bullet-up-right",
                         "ui-resizable-se":"bullet bullet-down-right"
                     },
-                    resize:function(){
+                    resize:function(event,ui){
                         self.isChoosed=false;
+                        self.width=ui.size.width;
+                        self.height=ui.size.height;
                     }
                 })
                 .draggable({
@@ -206,6 +226,57 @@ var Diagram=SimpleObject.extend({
         //$('.ui-resizable-sw',this.mainDiv).css({'bottom':'-2px'});
     }
 });
+var ChartVidget=Vidget.extend({
+    chartObj:null,
+    update:function(){
+        $('#title',this.mainDiv).text(this.type);
+        if(this.type>0)
+        {
+            if(this.chartObj===null)
+            {
+                this.chartObj= new Chart($('#chart',this.mainDiv)[0].getContext('2d'),{
+                    type: TYPE_GRAPHICS[this.type],
+                    data: {
+                        labels: [1,2,3,4,5],
+                        datasets: [{
+                            "label": this.title,
+                            data: [4,2,76,5,3],
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.2)',
+                                'rgba(54, 162, 235, 0.2)',
+                                'rgba(255, 206, 86, 0.2)',
+                                'rgba(75, 192, 192, 0.2)',
+                                'rgba(153, 102, 255, 0.2)',
+                                'rgba(255, 159, 64, 0.2)'
+                            ],
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            pointBorderColor:'rgba(150, 150, 150, 1)',
+                            borderWidth: 3,
+                            fill:false,
+                            lineTension:0
+                        }]
+                    },
+                    options: {
+                        responsive:true,
+                        maintainAspectRatio:false,
+                        //aspectRatio:this.width/this.height
+                    }
+                });
+            }else{
+                console.log(this.chartObj,this.height,this.width);
+                this.chartObj.config.type=TYPE_GRAPHICS[this.type];
+                //this.chartObj.options.aspectRatio=this.width/this.height;
+                //this.chartObj.canvas.parentNode.style.height = '700px';
+                this.chartObj.update();
+                //this.chartObj.render();
+                //this.chartObj.resize();
+            }
+        }
+    },
+    afterCreate:function(){
+        this.mainDiv.append('<canvas id="chart"></canvas>');
+    }
+})
 var Composer = SimpleObject.extend({
     panelButtons:['create','delete'],
     left:0,
@@ -214,7 +285,7 @@ var Composer = SimpleObject.extend({
     height:0,
     panelDiv:null,
     buttons:[],
-    diagramsList:[],
+    vidgetsList:[],
     init:function(obj){
         this.mainObj=obj;
         this.showMainWindow();
@@ -228,7 +299,7 @@ var Composer = SimpleObject.extend({
                 'title':'create',
                 image:'create.png',
                 action:function(){
-                    self.createDiagram();
+                    self.createVidget();
                 }
             }),
             panelButton.extend({
@@ -242,26 +313,27 @@ var Composer = SimpleObject.extend({
             })
         ]
     },
-    createDiagram:function(){
+    createVidget:function(){
         var self=this;
-        var diagram=Diagram.extend({
-            diagramsList:self.diagramsList,
+        console.log(ChartVidget);
+        var chart=ChartVidget.extend({
+            vidgetsList:self.vidgetsList,
             unChoosed:function(){
-                for(var i=0;i<self.diagramsList.length;i++)
+                for(var i=0;i<self.vidgetsList.length;i++)
                 {
-                    self.diagramsList[i].setUnChoose();
+                    self.vidgetsList[i].setUnChoose();
                 }
             }
         });
-        this.diagramsList.push(diagram);
-        console.log(this.diagramsList);
-        this.mainDiv.append(diagram.create());
+        this.vidgetsList.push(chart);
+        this.mainDiv.append(chart.create());
+        chart.setChoosed();
     },
     showMainWindow:function(){
         this.mainDiv=$("<div></div>");
         this.mainDiv.css({
             "width":"70%",
-            "height":"100%",
+            "height":"130%",
             "border":"1px solid",
             "float":"left",
             "overflow":'hidden'
@@ -272,7 +344,7 @@ var Composer = SimpleObject.extend({
         this.panelDiv=$("<div id='controlPanel'></div>");
         this.panelDiv.css({
             'width':'20%',
-            'height':'100%',
+            'height':'130%',
             'border':'1px solid',
             'float':'left'
         });
