@@ -31,17 +31,51 @@ var ComboBox=inputElement.extend({
         this.mainDiv=$('<select></select>');
         this.mainDiv
             .attr('name',this.name);
-        $.each(this.values,function(key,value){
-            self.mainDiv.append("<option value='"+key+"'>"+value+"</option>");
-        });
+        this.changeData(this.values);
         this.mainDiv.change(function(){
             self.value=this.value;
             self.change();
         });
         this.mainDiv.val(defaultValue);
     },
+    changeData:function(data)
+    {
+        var self=this;
+        $.each(data,function(key,value){
+            self.mainDiv.append("<option value='"+key+"'>"+value+"</option>");
+        });
+    },
     show:function(){
+        this.mainDiv.change(function(){
+            self.value=this.value;
+            self.change();
+        })
         return this.mainDiv;
+    }
+});
+var ComboBoxAjax=ComboBox.extend({
+    combobox:null,
+    init:function(name, dataRequest,defaultValue){
+        var self=this;
+        this.name=name;
+        this.combobox=Object.create(ComboBox);
+        self.combobox.init(name,[],0);
+        $.ajax(dataRequest).done(function(param){
+            var data=[''];
+            for(let i=0;i<param.length;i++)
+            {
+                data[param[i].id]=param[i].name;
+            }
+            self.combobox.changeData(data);
+            self.combobox.change=function(){
+                //self.obj.type=this.value*1;
+                //self.save();
+            }
+        });
+        this.mainDiv=this.combobox.show();
+    },
+    change:function(){
+        this.combobox.change();
     }
 });
 var panelButton=SimpleObject.extend({
@@ -67,30 +101,54 @@ var panelButton=SimpleObject.extend({
 var SettingPanel=SimpleObject.extend({
     type:1,
     obj:null,
-    show:function(){
-        this.mainDiv=$("<div></div>");
+    controls:[],
+    create:function(){
         switch(this.type)
         {
-            case 1: this.mainDiv.append(this.vidgetSetting());break;
+            case 1: this.vidgetSetting();break;
+        }
+        //this.show();
+        return this.show();
+    },
+    show:function(){
+        console.log(11);
+        var self=this;
+        this.mainDiv=$("<div></div>");
+        var obj1;
+        for(let i=0;i<this.controls.length;i++)
+        {   
+            let obj1=self.controls[i].show();
+            obj1.change(self.controls[i].change);
+            this.mainDiv.append(obj1);
+            //self.controls[i].change();
+            console.log(this.controls[i]);
         }
         return this.mainDiv;
     },
     save:function(){
-
     },
     vidgetSetting:function(){
         var self=this;
-        console.log(this.obj);
         var combobox=Object.create(ComboBox);
-        var comboboxDataSource=Object.create(ComboBox);
+        var comboboxDataSource=Object.create(ComboBoxAjax);
         combobox.init('typeVidget',TYPE_GRAPHICS,this.obj.type);
         combobox.change=function(){
+            alert(7);
             self.obj.type=this.value*1;
             self.save();
         }
-
-        comboboxDataSource.init('dataSource',TYPE_GRAPHICS,this.obj.type);
-        this.mainDiv.append(combobox.show());
+        comboboxDataSource.init('dataSource',{
+            url:'server.php',
+            dataType:'json',
+            method:'POST',
+            data:{
+                action:'getDataSource'
+            }
+        });
+        this.controls.push(combobox);
+        this.controls.push(comboboxDataSource);
+        //this.mainDiv.append(combobox.show());
+        //this.mainDiv.append(comboboxDataSource.show());
     }
 });
 var Vidget=SimpleObject.extend({
@@ -99,6 +157,7 @@ var Vidget=SimpleObject.extend({
     height:200,
     isChoosed:false,
     editor:'#controlPanel',
+    settingObj:null,
     create:function(){
         var self=this;
         this.mainDiv=$("<div></div>");
@@ -158,14 +217,19 @@ var Vidget=SimpleObject.extend({
     editVidget:function(){
         var self=this;
         $(this.editor).html('');
-        var setting=SettingPanel.extend({
-            obj:this,
-            save:function(){
-                self.type=this.obj.type;
-                self.update();
-            }
-        });
-        $('#controlPanel').html(setting.show());
+        if(this.settingObj===null)
+        {
+            this.settingObj=SettingPanel.extend({
+                obj:this,
+                save:function(){
+                    self.type=this.obj.type;
+                    self.update();
+                }
+            });
+            $('#controlPanel').html(this.settingObj.create());
+        }
+        else
+            $('#controlPanel').html(this.settingObj.show()); 
     },
     setChoosed:function(){
         var self=this;
